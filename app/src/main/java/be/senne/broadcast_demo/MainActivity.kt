@@ -3,13 +3,14 @@ package be.senne.broadcast_demo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import be.senne.broadcast_demo.ui.theme.Broadcast_demoTheme
 
 class MainActivity : ComponentActivity() {
@@ -22,7 +23,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    Greeting("Android")
+                    createMainScreen()
                 }
             }
         }
@@ -30,14 +31,37 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String) {
-    Text(text = "Hello $name!")
-}
+fun createMainScreen(vm: MainViewModel = viewModel()) {
 
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    Broadcast_demoTheme {
-        Greeting("Android")
+    val devices = vm.devices
+
+    Column() {
+        Button(onClick = {
+            vm.start()
+        }) {
+            Text("Start")
+        }
+        Button(onClick = {
+            vm.start()
+        }) {
+            Text("Stop")
+        }
+        Button(onClick = {
+            vm.ping()
+        }) {
+            Text("Ping")
+        }
+        LazyColumn() {
+            itemsIndexed(devices) { index, device ->
+                Text("${index}. ${device.name} (${device.id})")
+                Divider()
+            }
+        }
     }
 }
+
+
+data class Device(
+    val name : String,
+    val id : Long
+)
