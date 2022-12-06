@@ -1,72 +1,57 @@
 package be.senne.broadcast_demo
 
+import android.os.StrictMode
+import android.os.StrictMode.ThreadPolicy
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.*
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.InetAddress
+import java.net.SocketTimeoutException
+
 
 class MainViewModel : ViewModel() {
     var devices = mutableListOf<Device>()
 
-    private var job : Job?
-    private var sock = lazy {
-        val s = DatagramSocket()
-        s.broadcast = true
-        s.bind()
-        s
-    }
+
 
     init {
-        job = null
-
-        val device1 = Device("Device 1", 12)
-        val device2 = Device("Device 2", 3465)
-        val device3 = Device("Device 3", 68284572)
-        val device4 = Device("Device 4", 19234753923358)
-
-        devices.addAll(listOf(device1, device2, device3, device4))
     }
 
     fun start() {
-        job = viewModelScope.launch(Dispatchers.IO) {
-            val actualMagicArray = byteArrayOf(0x31, 0x56, 0x7F, 0x14)
-            var magicBuffer = ByteArray(4)
-            while(isActive) {
-                val receivedPacket : DatagramPacket = DatagramPacket(magicBuffer, 4)
-                sock.value.receive(receivedPacket)
 
-                if(magicBuffer.contentEquals(actualMagicArray)) {
-                    val bytes = "device 1;12".encodeToByteArray()
-                    val datagramPacket = DatagramPacket(bytes, bytes.size)
-                    sock.value.send(datagramPacket)
-                    delay(2000)
-                }
-            }
-        }
     }
 
     fun stop() {
-        job?.cancel()
+
     }
 
     fun ping() {
-        val actualMagicArray = byteArrayOf(0x31, 0x56, 0x7F, 0x14)
-        val sendPacket : DatagramPacket = DatagramPacket(actualMagicArray, 4)
-        sock.value.send(sendPacket)
+        val policy = ThreadPolicy.Builder().permitAll().build()
+        StrictMode.setThreadPolicy(policy)
 
-        val devs = ArrayList<Device>()
+        val broadcastAddr = InetAddress.getByName("192.168.83.255")
+        val bindPort = 14581
+        val socket = DatagramSocket(bindPort)
+        socket.broadcast = true
+        val bytes = byteArrayOf(0x10, 0x11, 0x12, 0x13, 0x70, 0x69, 0x7A, 0x7A, 0x61, 0x00)
 
-        val startTime = System.currentTimeMillis()
+        val sendPacket = DatagramPacket(bytes, bytes.size, broadcastAddr, bindPort)
+        socket.soTimeout = 200
 
-        while(System.currentTimeMillis() - startTime >= 2000) {
-            val receivedData = ByteArray(4)
-            val receivedPacket = DatagramPacket(receivedData, 4)
-            sock.value.receive(receivedPacket)
-
-            val device = Device(receivedData[0].toString(), receivedData[1].toLong())
-            devs.add(device)
+        while(true) {
+            val startTime = System.currentTimeMillis()
+            socket.broadcast = true
+            socket.send(sendPacket)
+            while ((System.currentTimeMillis() - startTime) <= 5000) {
+                socket.broadcast = false
+                val recvBytes = ByteArray(512)
+                val receivePacket = DatagramPacket(recvBytes, recvBytes.size)
+                try {
+                    socket.receive(receivePacket)
+                    println("received packet from ${receivePacket.address}")
+                } catch (_: SocketTimeoutException){
+                }
+            }
         }
-        devices = devs
     }
 }
