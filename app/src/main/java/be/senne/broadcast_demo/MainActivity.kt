@@ -46,11 +46,6 @@ fun createMainScreen(vm: MainViewModel = viewModel()) {
         }) {
             Text("Stop")
         }
-        Button(onClick = {
-            vm.ping()
-        }) {
-            Text("Ping")
-        }
         LazyColumn() {
             itemsIndexed(devices) { index, device ->
                 Text("${index}. ${device.name} (${device.id})")
